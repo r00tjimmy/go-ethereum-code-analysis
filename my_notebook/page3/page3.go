@@ -4,6 +4,8 @@ import (
   "sync"
   "reflect"
   "fmt"
+  "github.com/ethereum/go-ethereum/rlp"
+  "github.com/ethereum/go-ethereum/common"
 )
 
 var (
@@ -135,6 +137,45 @@ func makeStructWriter(typ reflect.Type) (writer, error) {
   }
   return writer, nil
 }
+
+
+// Decoder结构体返回 DecodeRLP方法
+type Decoder interface {
+  DecodeRLP(*Stream) error
+}
+
+// block.go
+func (b *Block) DecodeRLP(s *rlp.Stream) error {
+  var eb extblock
+  _, size, _ := s.Kind()
+  if err := s.Decode(&eb); err != nil {
+    return err
+  }
+  b.header, b.uncles, b.transactions = eb.Header, eb.Uncles, eb.Txs
+  b.size.Store(common.StorageSize(rlp.ListSize(size)))
+  return nil
+}
+
+
+
+//关于之前看的， 怎么写入一个解密之后的buf， 记录的源码如下
+type endbuf struct {
+  str         []byte
+  lheads      []*listhead
+  lhsize      int
+  sizebuf     []byte
+}
+
+
+func writeBool(val reflect.Value, w *endbuf) error {
+  if val.Bool() {
+    w.str = append(w.str, 0x01)
+  } else {
+    w.str = append(w.str, 0x80)
+  }
+  return nil
+}
+
 
 
 

@@ -47,4 +47,34 @@ func main() {
   fmt.Println(len(sli))
 }
 
+// walk invokes its runTest argument for all subtests in the given directory.
+//
+// runTest should be a function of type func(t *testing.T, name string, x <TestType>),
+// where TestType is the type of the test contained in test files.
+// 偶然发现有一个测试的类， 这个类是可以调用某个文件夹， 然后调用文件夹下面的文件， 跑某个测试函数的
+func (tm *testMatcher) walk(t *testing.T, dir string, runTest interface{}) {
+  // Walk the directory.
+  dirinfo, err := os.Stat(dir)
+  if os.IsNotExist(err) || !dirinfo.IsDir() {
+    fmt.Fprintf(os.Stderr, "can't find test files in %s, did you clone the tests submodule?\n", dir)
+    t.Skip("missing test files")
+  }
+  err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+    name := filepath.ToSlash(strings.TrimPrefix(path, dir+string(filepath.Separator)))
+    if info.IsDir() {
+      if _, skipload := tm.findSkip(name + "/"); skipload {
+        return filepath.SkipDir
+      }
+      return nil
+    }
+    if filepath.Ext(path) == ".json" {
+      t.Run(name, func(t *testing.T) { tm.runTestFile(t, path, name, runTest) })
+    }
+    return nil
+  })
+  if err != nil {
+    t.Fatal(err)
+  }
+}
+
 
