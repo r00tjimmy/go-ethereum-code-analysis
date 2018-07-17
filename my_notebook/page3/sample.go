@@ -78,3 +78,39 @@ func (tm *testMatcher) walk(t *testing.T, dir string, runTest interface{}) {
 }
 
 
+
+
+func Fprintf (w io.writer, format string, args ...interface{}) (int, error)
+
+
+func Printf(format string, args ...interface{})  (int error) {
+  return Fprintf(os.Stdout, format, args...)   
+}
+
+func SPrintf(format string, args ...interface{}) string {
+  var buf bytes.Buffer
+  Fprintf(&buf, format, args...)
+  return buf.String()
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
