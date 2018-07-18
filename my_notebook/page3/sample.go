@@ -2,6 +2,9 @@ package main
 
 import (
   "fmt"
+  "time"
+  "io"
+  "github.com/micro/examples/stream/server/proto"
 )
 
 func GetStrs() (string, string, string) {
@@ -94,7 +97,103 @@ func SPrintf(format string, args ...interface{}) string {
 }
 
 
+type ByteCounter int
 
+func (c *ByteCounter) Write(p []byte) (int, error) {
+  *c += ByteCounter(len(p))
+  return len(p), nil
+}
+
+var c ByteCounter
+c.Write([]byte("hello"))
+fmt.Println(c)
+
+c = 0
+var name = "Dolly"
+fmt.FPrintf(&c, "hello, %s", name)
+fmt.Println(c)
+
+
+package io
+
+type Reader interface {
+  Read(p []byte) (n int, err error)
+}
+
+type Closer interface {
+  Close() error
+}
+
+
+type ReadWriter interface {
+  Reader
+  Writer
+}
+
+type ReadWriteCloser interface {
+  Reader
+  Writer
+  Closer
+}
+
+
+
+type ReadWriter interface {
+  Read(p []byte) (n int, err error)
+  Write(p []byte) (n int, err error)
+}
+
+
+/**
+一个具体的类型可能实现了很多不相关的接口， 考虑在一个组织出售数字文化产品比如音乐， 电影和书籍的程序中可能定义了下列的具体类型：
+Album
+Book
+Movie
+Magazine
+Podcast
+TVEpisode
+Track
+ */
+
+
+/**
+下面的这些代码等于是定义了一些 接口类型的 struct
+ */
+type Artifact interface {
+  Title() string
+  Creators() []string
+  Created() time.Time
+}
+
+type Text interface {
+  Pages() int
+  Words() int
+  PageSize() int
+}
+
+type Audio interface {
+  Stream() (io.ReadCloser, error)
+  RunningTime() time.Duration
+  Format() string
+}
+
+
+type Video interface {
+  Stream() (io.ReadCloser, error)
+  RunningTime() time.Duration
+  Format() string
+  Resolution() (x, y int)
+}
+
+
+/**
+如果我们发现我们需要以同样的方式来处理 Audio 和 Video， 我们可以定义一个Streamer接口来代表它们之间相同的部分而不必对已存在的类型做改变
+ */
+type Streamer interface {
+  Stream() (io.ReadCloser, error)
+  RunningTime() time.Duration
+  Format() string
+}
 
 
 
