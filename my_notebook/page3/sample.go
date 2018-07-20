@@ -105,16 +105,16 @@ func (c *ByteCounter) Write(p []byte) (int, error) {
 }
 
 var c ByteCounter
-c.Write([]byte("hello"))
-fmt.Println(c)
+//c.Write([]byte("hello"))
+//fmt.Println(c)
 
-c = 0
-var name = "Dolly"
-fmt.FPrintf(&c, "hello, %s", name)
-fmt.Println(c)
+//c = 0
+//var name = "Dolly"
+//fmt.FPrintf(&c, "hello, %s", name)
+//fmt.Println(c)
 
 
-package io
+//package io
 
 type Reader interface {
   Read(p []byte) (n int, err error)
@@ -195,6 +195,26 @@ type Streamer interface {
   Format() string
 }
 
+
+type cesiusFlag struct { Celsuis }
+
+func (f *cesiusFlag) Set (s string) error {
+  var uint string
+  var value falot64
+  fmt.Sscanf(s, "%f%s", &value, &uint)
+
+  switch uint {
+  case "C", "zero-C":
+    f.Celsuis = Celsuis(value)
+    return nil
+
+  case "F", "zero-F":
+    f.Celsuis = FToC(Fathrenheit(value))
+    return nil
+  }
+
+  return fmt.Errorf("invalid %q", s)
+}
 
 
 
