@@ -47,3 +47,10 @@ func main() {
 }
 
 
+func test1(args ...string) {
+  for _, v := range args {
+    fmt.Println(v)
+  }
+}
+
+
