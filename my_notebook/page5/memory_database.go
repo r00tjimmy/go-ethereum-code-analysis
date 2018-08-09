@@ -30,3 +30,35 @@ func (db *MemDatabase) Has(key []byte) (bool, error) {
   _, ok := db.db[string(key)]
   return ok, nil
 }
+
+
+
+// ======================= batch ======================================
+
+type kv struct {
+  k, v []byte 
+}
+
+type memBatch struct {
+  db *MemDatabase
+  writes []kv
+  size int
+}
+
+func (b *memBatch) Put(key, value []byte) error {
+  b.writes = append(b.writes, kv{common.CopyBytes(key), common.CopyBytes(value)})
+  b.size += len(value)
+  return nil
+}
+
+
+func (b *memBatch) Write() error {
+  b.db.lock.Lock()
+  defer b.db.lock.Unlock()
+
+  for _, kv := range b.writes {
+    b.db.db[string(kv.k)] = kv.v
+  }
+  return nil
+
+}
