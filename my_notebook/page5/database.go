@@ -23,5 +23,54 @@ type LDBDatabase struct {
   putTimer    gometrics.Timer
 
   quitLock      sync.Mutex
-  quitChan      chan chan error    
+  quitChan      chan chan error 
+
+  log log.Logger   
 }
+
+
+func NewLDBDatabase(file string, cache int, handles int) (* LDBDatabase, error) {
+  logger := log.New("database", file)
+
+  if cache < 16 {
+    cache = 16
+  } 
+
+  if handles < 16 {
+    handles = 16
+  }
+
+  logger.info("allocate cache and file handles", "cache", cache, "handles", handles)
+
+  db, err := leveldb.OpenFile(file, &opt.Options{
+      OpenFileCacheCapacity:      handles,
+      BlockCacheCapacity:         cache / 2 * opt.MiB,
+      WriteBuffer:                cache / 4 * opt.MiB,
+      Filter:                     filter.NewBloomFilter(10),
+    })
+
+  if _, corrupted := err.(*errors.ErrCorrupted); corrupted {
+    db, err = leveldb.RecoverFile(file, nil) 
+  }
+
+  if err != nil {
+    return nil, err 
+  }
+
+  return &LDBDatabase {
+    fn:   file,
+    db:   db,
+    log:  logger,
+  }, nil
+
+}
+
+
+
+
+
+
+
+
+
+
