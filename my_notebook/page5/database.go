@@ -68,6 +68,23 @@ func NewLDBDatabase(file string, cache int, handles int) (* LDBDatabase, error) 
 
 
 
+func (db *LDBDatabase) Meter(prefix string) {
+  // short  circuit metering 
+  if !metrics.Enabled {
+    return
+  }
+
+  db.getTimer = metrics.NewTimer(prefix + "user/gets")
+
+  // create a quit channel for periodic collector and run it
+  db.quitLock.Lock()
+  db.quitChan = make(chan chan error)       // 初始化这个 quitChan ?????
+  db.quitLock.Unlock()
+
+  go db.meter(3 * time.Second)
+}
+
+
 
 
 
