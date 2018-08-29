@@ -56,3 +56,104 @@ func NewServer() *Server {
 
   return server
 }
+
+
+
+
+func (s *Server) RegisterName(name string, rcvr interface{}) error {
+  if s.services == nil {
+    s.services = make(serviceRegistry)
+  }
+
+  svc := new(service)
+  svc.typ = reflect.TypeOf(rcvr)
+  rcvrVal := reflect.ValueOf(rcvr)
+
+  if name == "" {
+    return fmt.Errorf("no serivce error ----------------------- %s", svc.typ.String())
+  }
+
+
+  # reflect.Indirect 是通过反射的形式获得变量的指针
+  if !isExported(reflect.Indirect(rcvrVal).Type().Name()) {
+    return fmt.Errorf("%s is not exported ", reflect.Indirect(rcvrVal).Type().Name())
+  }
+
+  methods, subscriptions := suitableCallbacks(rcvrVal, svc.typ)
+
+  if regsvc, present := s.services[name]; present {
+    // golang 几乎有一个特点就是，每个逻辑开始之前，都要做一下致命的错误判断？
+    if len(methods) == 0 && len(subscriptions) == 0 {
+      return fmt.Errorf("services dont have method %T", rcvr)
+    }
+
+    for _, m := range methods {
+      regsvc.callbacks[formatName(m.method.Name)] = m 
+    }
+
+    for _, s := range subscriptions {
+      regsvc.subscriptions[formatName(s.method.Name)] = s
+    }
+
+    return nil
+  }
+
+  svc.name = name
+  svc.callbacks, svc.subscriptions = methods, subscriptions
+
+  if len(svc.callbacks)  == 0 && len(svc.subscriptions) == 0 {
+    return fmt.Errorf("service T doesnot ", rcvr)
+  }
+
+  s.services[svc.name] = svc
+  return nil
+
+}
+
+
+
+// 一般回调的做法都是通过反射来获取一些信息， 例如这里就是通过反射来获取合适的方法, 下面的 suitableCallbacks 就是这样的一个逻辑
+
+func suitableCallbacks(rcvr reflect.Value, typ reflect.Type) (callbacks, subscriptions) {
+  // 这个是回调的
+  callbacks := make(callbacks)
+
+  // 这个是订阅的
+  subscriptions := make(subscriptions)
+
+
+  // golang 的这种写法类似 C++ 里面的 goto
+  METHODS:
+  // 遍历方法？？？
+  for m := 0; m < typ.NumMethod(); m++ {
+    method := typ.Method(m)
+    mtype:= method.Type
+    mname := formatName(method.Name)
+    if method.PkgPath != "" {
+      continue
+    }
+
+    var h callback
+    h.isSubscribe = isPubSub(mtype)
+    h.rcvr = rcvr
+    h.method = method
+    h.errPos = -1
+
+    firstArg := 1
+    numln := mtype.Numln()
+    if numln >= 2 && mtype.ln(1) == contextType {
+      
+    }
+
+  }
+
+}
+
+
+
+
+
+
+
+
+
