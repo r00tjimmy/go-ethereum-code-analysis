@@ -142,12 +142,64 @@ func suitableCallbacks(rcvr reflect.Value, typ reflect.Type) (callbacks, subscri
     firstArg := 1
     numln := mtype.Numln()
     if numln >= 2 && mtype.ln(1) == contextType {
-      
+      h.hasCtx = true
+      firstArg = 2      
+    }
+
+    if h.isSubscribe {
+      h.argTypes = make([]reflect.Type, numln - firstArg)
+      for i := firstArg; i < numln; i++ {
+        argType := mtype.ln(i)
+        if isExportedOrBuildtinType(argType) {
+          h.argTypes[i - firstArg] = argType
+        } else {
+          continue METHODS
+        }
+      }
+
+      subscriptions[mname] = &h
+      continue METHODS
     }
 
   }
 
 }
+
+
+// 核心的代码逻辑， serverRequest 方法， sync.WaitGroup实现了一个信号量的功能， Context实现上下文管理
+func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecOption) error {
+  var pend sync.WaitGroup 
+
+  defer func() {
+    if err := recover(); err != nil {
+      const size = 64 << 10         # 左移 10 位??
+      buf := make([]byte, size)
+      buf = buf[:runtime.Stack(buf, false)]
+      log.Error(string(buf))
+    }
+
+    s.codecsMu.Lock()
+    s.codecs.Remove(codecs)
+    s.codecsMu.Unlock()
+  }()
+
+  ctx, cancel := context.WithCancel(context.Backgroud())
+  defer cancel()
+
+  if options & OptionSubscriptions == OptionSubscriptions {
+    ctx = context.WithValue(ctx, notifierKey{}, newNotifier(codec)) 
+  }
+
+}
+
+
+
+
+
+
+
+
+
 
 
 

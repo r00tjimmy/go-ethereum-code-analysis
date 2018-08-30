@@ -1,0 +1,1 @@
+// go vet 工具sample代码
