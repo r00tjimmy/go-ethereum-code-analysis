@@ -187,8 +187,17 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
   defer cancel()
 
   if options & OptionSubscriptions == OptionSubscriptions {
+    // context 是获取不同的 goroutine 的值
     ctx = context.WithValue(ctx, notifierKey{}, newNotifier(codec)) 
   }
+
+  s.codecsMu.Lock()
+  if atomic.LoadInt32(&s.run) != 1 {      // server stopped
+    s.codecsMu.Unlock()
+    return &shutdownError{}
+  }
+  s.codecs.Add(codec)
+  s.codecsMu.Unlock()
 
 }
 
