@@ -199,7 +199,67 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
   s.codecs.Add(codec)
   s.codecsMu.Unlock()
 
+  for atomic.LoadInt32(&s.run) == 1 {
+    reqs, batch, err := s.readRequest(codec)
+    if err != nil {
+      if err.Error() != "EOF" {
+        log.Debug(fmt.Sprintf("read error %v/n", err))
+        // codec 只是一个序列， 是一个回复, 是RPC的一个信息加工过之后的回复
+        codec.Write(codec.CreateErrorResponse(nil, err))
+      }
+      // 这里主要是考虑多线程处理的时候等待所有的 rquest处理完毕
+      // 每启动一个go线程会调用pend.Add()
+      // 处理完成后调用 pend.Done() 会减1， 当为0的时候， Wait()方法就会返回
+      pend.Wait()
+      return nil
+    }
+  }
+
+
+  // 启动线程对请求进行服务
+  go func(reqs []*serveRequest, batch bool) {
+    defer pend.Done()
+    if batch {
+      s.execBatch(ctx, codec, reqs)
+    } else {
+      s.exec(ctx, codec, reqs[0])
+    }
+  }(reqs, batch)
+
 }
+
+
+// 定义返回的数据类型
+type rpcRequest struct {
+  service       string
+  method        string
+  id            interface{}
+  isPubSub      bool
+  params        interface{}
+  err           Error
+}
+
+
+
+
+type serverRequest struct {
+  id                interface{}
+  svcname           string
+  callb             *callback
+  args              []reflect.Value
+  isUnsubsribe      bool
+  err               Error 
+}
+
+
+
+func (s *Server) readRequest(codec ServerCodec) ([] *serveRequest, bool, Error) {
+  
+}
+
+
+
+
 
 
 
