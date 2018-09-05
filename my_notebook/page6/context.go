@@ -57,10 +57,29 @@ func main() {
   // 定义 ctx 的上下文传递的值
   ctx = context.WithValue(ctx, "Test", "123456")
 
-  if t, ok := ctx.Deadline; ok {
+  if t, ok := ctx.Deadline(); ok {
     fmt.Println(time.Now())
     fmt.Println(t.String())
   }
+
+  // 在当前的 groutine 输出上下文传递的值
+  go func(ctx context.Context) {
+    fmt.Println(ctx.Value("Test"))
+    fmt.Println("waitting for this context groutine finished --------------- [main]")
+
+    for {
+      select {
+      case <- ctx.Done():
+        fmt.Println(ctx.Err())
+        return
+      }
+    }
+
+  } (ctx)
+
+  time.Sleep(time.Second * 3)     // sleep 3 seconds
+  fmt.Println("finished!!!")
+  cancelFunc()
 
 }
 
