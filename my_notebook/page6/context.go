@@ -70,6 +70,7 @@ func main() {
     for {
       select {
       case <- ctx.Done():
+        fmt.Println("this groutine done......")
         fmt.Println(ctx.Err())
         return
       }
