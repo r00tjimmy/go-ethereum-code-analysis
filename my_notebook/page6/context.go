@@ -2,6 +2,10 @@
 // context包
 
 /**
+一般用于在不同的 channel 之间传递数据的
+**/
+
+/**
 type Context interface {
   // 返回已经取消了的
   Done() <- chan struct{}
@@ -78,7 +82,7 @@ func main() {
 
   } (ctx)
 
-  time.Sleep(time.Second * 3)     // sleep 3 seconds
+  time.Sleep(time.Second * 5)     // sleep 3 seconds
   fmt.Println("finished!!!")
   cancelFunc()
 

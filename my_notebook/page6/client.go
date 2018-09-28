@@ -75,29 +75,64 @@ func (c *Client) Call (result interface{}, method string, args ...interface{}) e
 func (c *Client) CallContext (ctx context.Context, result interface{}, method string, args ...interface{}) error {
   msg, err := c.newMessage(method, args...)
 
+  if err != nil {
+    return err
+  }
+
+  op := &requestOp{ ids: []json.RawMessage{msg.ID}, resp: make(chan *jsonrpcMessage, 1) }
+
+  if c.isHTTP {
+    err = c.sendHTTP(ctx, op, msg)
+  } else {
+    err = c.send(ctx, op, msg)
+  }
+
+  if err != nil {
+    return err
+  }
+
+  // dispatch has accepted the request and will close the channel it when it quit
+  switch resp, err := op.wait(ctx); {
+  case err != nil :
+    return err
+  case resp.Error != nil: 
+    return resp.Error
+  case len(resp.Result) == 0:
+    return ErrNoResult
+  default:
+    return json.Unmarshal(resp.Result, &result)
+   
+  }
+
+}
+
+
+// sendHTTP,这个方法直接调用doRequest方法进行请求拿到回应。然后写入到resp队列就返回了。
+func (c *Client) sendHTTP(ctx context.Context, op *requestOp, msg interface{}) error {
+  hc := c.writeConn.(*httpConn)
+  respBody, err := hc.doRequest(ctx, msg)
+  if err != nil {
+    return err
+  }
+  defer respBody.Close()
+  var respmsg jsonrpcMessage
+  if err := json.NewDecoder(respBody).Decode(&respmsg); err != nil {
+    return err
+  }
+  op.resp <- &respmsg
+  return nil
 }
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+func (op *requestOp) wait(ctx context.Context) (*jsonrpcMessage, error) {
+  select {
+  case <- ctx.Done():
+    return nil, ctx.Err()
+  case resp := <- op.resp:
+    return resp, op.err
+  }
+}
 
 
 
